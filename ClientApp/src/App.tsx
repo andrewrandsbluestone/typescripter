@@ -7,6 +7,10 @@ import { Counter } from './components/Counter';
 
 import './custom.css'
 
+function sayHello(name) {
+    return 'hello ' + name;
+}
+
 export default class App extends Component {
   static displayName = App.name;
 
