@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 export function LongRunner() {
     const [message, setMessage] = useState("waiting");
     const [isPolling, setIsPolling] = useState(false);
+    const [pollingToken, setPollingToken] = useState<string>();
 
     useEffect(() => {
 
@@ -13,10 +14,11 @@ export function LongRunner() {
             return body;
         }
         const determineIfProcessing = async () => {
-            const polling = await http<number>("getBusy/pollForResult");
-            console.log(`polling: ${polling}`);
-            setIsPolling(polling === 0);
-            if (polling === 1)
+            const busy = await http<boolean>(`getBusy/pollForResult/${pollingToken}`);
+            console.log(`polling: ${busy}`);
+            setIsPolling(busy);
+            if (!busy)
+                // can now fetch the results
                 setMessage("done!");
         }
 
@@ -45,7 +47,8 @@ export function LongRunner() {
                     'Content-Type': "application/json"
                 }
             });
-        const content = await response.json();
+        const id = await response.json();
+        setPollingToken(id);
     };
 
     const handlePollingTask = async () => {

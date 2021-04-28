@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,12 +12,14 @@ namespace typescripter.Controllers
     [Route("[controller]")]
     public class GetBusyController : ControllerBase
     {
-        private static bool Busy = false;
+        private static readonly ConcurrentDictionary<Guid, bool> Busy = new ConcurrentDictionary<Guid, bool>();
 
-        [HttpGet("pollForResult")]
-        public int PollForResult()
+        [HttpGet("pollForResult/{pollingToken}")]
+        public bool PollForResult([FromRoute] string pollingToken)
         {
-           return Busy ? 0: 1;
+            var guid = new Guid(pollingToken);
+
+            return Busy.TryGetValue(guid, out var value) && value;
         }
 
         [HttpPost("Block")]
@@ -29,14 +33,16 @@ namespace typescripter.Controllers
         [HttpPost("Poll")]
         public IActionResult Poll(Model model)
         {
+            var guid = Guid.NewGuid();
+
             Task.Run(() =>
             {
-                Busy = true;
+                Busy.TryAdd(guid, true);
                 LongRunningJob(10000);
-                Busy = false;
+                Busy.TryUpdate(guid, false, true);
             });
 
-            return new OkObjectResult(model.Name);
+            return new OkObjectResult(guid.ToString());
         }
         
         private void LongRunningJob(int milliseconds)
